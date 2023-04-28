@@ -5,22 +5,22 @@
 # "sigma1", "mu2" and "sigma2", given dataset "data", distributions "D1" and
 # "D2", and parameter "lambda".
 mLL <- function(mu1,sigma1,mu2,sigma2,lambda,data,D1,D2) {
-# "mu1", "mu2", "sigma1" and "sigma2" are the log of the parameter values.
-# "lambda" and "data" are two numeric vectors of the same length.
-# "D1" and "D2" are two functions of probability density.
+  # "mu1", "mu2", "sigma1" and "sigma2" are the log of the parameter values.
+  # "lambda" and "data" are two numeric vectors of the same length.
+  # "D1" and "D2" are two functions of probability density.
   params <- c(mu1,sigma1,mu2,sigma2)
   names(params) <- c("mu1","sigma1","mu2","sigma2")
   with(as.list(exp(params)), {
     out <- lambda*D1(data,mu1,sigma1)
     out <- out+(1-lambda)*D2(data,mu2,sigma2)
     return(-sum(log(out)))
-  })  
+  })
 }
 
 #-------------
 
 #' Starting values of the parameter of a finite mixture model.
-#' 
+#'
 #' @keywords internal
 # This function calculates the starting values of parameter "lambda".
 startval <- function(data,D1,D2) {
@@ -83,7 +83,7 @@ startval <- function(data,D1,D2) {
 #'    maximization algorithm? Nature Biotechnology 26(8): 897-899.\cr
 #'  \cr
 #'  Peter Schlattmann (2009) Medical Applications of Finite Mixture Models.
-#'    Springer-Verlag, Berlin.  
+#'    Springer-Verlag, Berlin.
 #' @seealso \code{\link{confint.em}} method for calculating the confidence
 #'    intervals of the parameters and \code{\link{cutoff}} for deriving a
 #'    cut-off value.
@@ -119,25 +119,25 @@ em <- function(data,D1,D2,t=1e-64) {
     while(abs(lambda0-mean(lambda))>t) {
       lambda <- mean(lambda)
       lambda0 <- lambda
-# Expectation step:
+      # Expectation step:
       distr1 <- lambda*D1b(data,mu1,sigma1)
       distr2 <- (1-lambda)*D2b(data,mu2,sigma2)
       lambda <- distr1/(distr1+distr2) # lambda is a vector.
-# Minimization step (maximum-likelihood parameters estimations):
+      # Minimization step (maximum-likelihood parameters estimations):
       mLL2 <- function(mu1,sigma1,mu2,sigma2)
-			return(mLL(mu1,sigma1,mu2,sigma2,lambda,data,D1b,D2b))
+        return(mLL(mu1,sigma1,mu2,sigma2,lambda,data,D1b,D2b))
       start <- as.list(log(c(mu1=mu1,sigma1=sigma1,mu2=mu2,sigma2=sigma2)))
       out <- bbmle::mle2(mLL2,start,"Nelder-Mead")
-# The following 4 lines assign the MLE values to the corresponding parameters:
+      # The following 4 lines assign the MLE values to the corresponding parameters:
       coef <- out@coef
       coef_n <- names(coef)
       names(coef) <- NULL
       for(i in 1:4) assign(coef_n[i],exp(coef[i]))
     }
-# Put in shape and return the output:
+    # Put in shape and return the output:
     out <- list(
-		lambda=lambda,param=exp(out@coef),D1=D1,D2=D2,deviance=out@min,
-			data=data,data_name=data_name,out=out,t=t)
+      lambda=lambda,param=exp(out@coef),D1=D1,D2=D2,deviance=out@min,
+      data=data,data_name=data_name,out=out,t=t)
     class(out) <- "em"
     return(out)
   })
@@ -147,7 +147,7 @@ em <- function(data,D1,D2,t=1e-64) {
 
 #' Print method of S3-class "em".
 #'
-#' @S3method print em
+#' @export print em
 print.em <- function(object) {
   hash <- list(
     normal=c("mean","sd"),
@@ -158,46 +158,46 @@ print.em <- function(object) {
   param <- as.list(object$param)
   digits <- unlist(options("digits"))
   cat(paste0("\n        Finite mixture model fitting to dataset \"",
-		object$data_name,"\":\n\n"))
+             object$data_name,"\":\n\n"))
   cat(paste("probability to belong to distribution 1 =",
-		round(mean(object$lambda),digits),"\n"))
+            round(mean(object$lambda),digits),"\n"))
   cat(paste("distribution 1:",object$D1,"\n"))
   cat(paste0("  location (",hash[[object$D1]][1],") = ",
-		round(param$mu1,digits),"\n"))
+             round(param$mu1,digits),"\n"))
   cat(paste0("  scale (",hash[[object$D1]][2],") = ",
-		round(param$sigma1,digits),"\n"))
+             round(param$sigma1,digits),"\n"))
   cat(paste("distribution 2:",object$D2,"\n"))
   cat(paste0("  location (",hash[[object$D2]][1],") = ",
-		round(param$mu2,digits),"\n"))
+             round(param$mu2,digits),"\n"))
   cat(paste0("  scale (",hash[[object$D2]][2],") = ",
-		round(param$sigma2,digits),"\n"))
+             round(param$sigma2,digits),"\n"))
   cat(paste("deviance of the fitted model:",
-        round(object$deviance,digits),"\n\n"))
+            round(object$deviance,digits),"\n\n"))
 }
 
 #-------------
 
 #' Lines method of S3-class "em".
 #'
-#' @S3method lines em
+#' @export lines em
 lines.em <- function(object,...) {
-# ...: parameter passed to the "line" function.
+  # ...: parameter passed to the "line" function.
   with(object,with(as.list(param), {
     lambda <- mean(lambda)
     curve(dnorm(x,mu1,sigma1),add=T,n=512,lty=2,...)
     curve(dnorm(x,mu2,sigma2),add=T,n=512,lty=2,...)
     curve(lambda*dnorm(x,mu1,sigma1)+
-      (1-lambda)*dnorm(x,mu2,sigma2),add=T,n=512,...)
+            (1-lambda)*dnorm(x,mu2,sigma2),add=T,n=512,...)
   }))
 }
 
 #-------------
 
 #' Confint method of S3-class \code{em}.
-#' 
+#'
 #' This method of the S3 \code{em} class calculates the confidence intervals of
 #' the parameters of the fitted finite mixture model.
-#' 
+#'
 #' Confidence intervals of the parameters of probability distributions are
 #' calculated by the \code{confint} method of the S4 \code{confint} class of the
 #' \code{bbmle} package with default values. See the help of this method for
@@ -217,7 +217,7 @@ lines.em <- function(object,...) {
 #'   finite mixture model (five row, one per parameter).
 #' @references David Oakes (1999) Direct calculation of the information matrix
 #'   via the EM algorithm. J R Statist Soc B, 61: 479-482.
-#' @S3method confint em
+#' @export confint em
 # This function returns the parameter values and their confidence
 # intervals from an output of the "em" function.
 confint.em <- function(object,t=1e-64,nb=10,level=.95) {
